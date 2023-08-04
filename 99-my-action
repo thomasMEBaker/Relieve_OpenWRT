@@ -1,0 +1,80 @@
+#!/bin/bash
+wan_connected_func(){
+	logger -t hotplug "WAN PLUGGED"
+
+	# Run ip route show and save the output to a variable
+	ip_route_output=$(ip route show)
+
+	# Extract the default gateway line from the output
+	default_gateway_line=$(echo "$ip_route_output" | grep default)
+
+	# Extract the IP address of the upstream router from the default gateway line
+	upstream_router_ip=$(echo "$default_gateway_line" | awk '{print $3}')
+
+	# Extract the subnet prefix in CIDR notation using the "ip" command
+	subnet_prefix=$(echo "$default_gateway_line" | awk '{print $1}')
+
+	# Calculate the subnet mask from the CIDR notation using the get_subnet_mask function
+	subnet_mask=$(echo "$subnet_prefix" | awk -F'/' '{ n = 32 - $2; mask = sprintf("%d.%d.%d.%d", 2^((n>=8)*8+n%8)-1, 2^((n>=16)*8+((n%16)>=8)*8)-1, 2^((n>=24)*8+((n%24)>=16)*8)-1, 2^(n>=32)*8-1); print mask }')
+
+	# Save the subnet mask of the upstream router (default gateway) to a variable
+	my_subnet_mask="$subnet_mask"
+
+	# Get the LAN IP address and subnet mask using uci
+	lan_ip=$(uci get network.lan.ipaddr)
+	lan_subnet_mask=$(uci get network.lan.netmask)
+
+	# Calculate the LAN subnet mask in CIDR notation
+	lan_subnet_cidr=$(awk 'BEGIN { n=0; split("'"$lan_subnet_mask"'", a, "."); for (i in a) n+=int(log(256+a[i])/log(2)); print 32-n }')
+
+	lan_subnet_mask_calculated=$(echo "$lan_ip/$lan_subnet_cidr" | awk -F'/' '{ n = 32 - $2; mask = sprintf("%d.%d.%d.%d", 2^((n>=8)*8+n%8)-1, 2^((n>=16)*8+((n%16)>=8)*8)-1, 2^((n>=24)*8+((n%24)>=16)*8)-1, 2^(n>=32)*8-1); print mask }')
+
+	# Print the IP address and subnet of the upstream router
+	logger -t hotplug "Upstream Router IP: $upstream_router_ip"
+	logger -t hotplug "Upstream Router Subnet: $my_subnet_mask"
+
+	# Print the LAN IP address and subnet
+	logger -t hotplug "LAN IP Address: $lan_ip"
+        logger -t hotplug "LAN Subnet: $lan_subnet_mask_calculated"
+
+	#check for IP and subnet clashes
+	if [ "$upstream_router_ip" = "$lan_ip" ] && [ "$my_subnet_mask" = "$lan_subnet_mask_calculated" ]; then
+
+		logger -t hotplug "LAN Network IP Address: $lan_ip"
+
+		third_octet=$(($(echo "$lan_ip" | cut -d. -f3) + 1))
+
+		# Update the IP address with the new third octet
+
+		new_ip_address=$(echo "$lan_ip" | awk -F. -v new_octet="$third_octet" '{print $1 "." $2 "." new_octet "." $4}')
+
+		logger -t hotplug "Updated IP Address: $new_ip_address"
+
+		# Add the updated LAN configuration
+		uci set network.lan=interface
+		uci set network.lan.proto='static'
+		uci set network.lan.ipaddr="$new_ip_address"
+		uci set network.lan.netmask="255.255.255.0"
+
+		uci commit network
+
+                logger -t hotplug "LAN settings updated. New IP address: $new_ip_address/$new_lan_subnet"
+
+		reboot
+
+		else
+			logger -t hotplug "No clash - keeping LAN as 192.168.2.1"			
+		fi
+}
+
+
+ [ "${INTERFACE}" = "wan" ] {
+    logger -t hotplug "WAN DEVICE CHANGE DETECTED"
+	 [ "${ACTION}" = "ifup" ] &&{
+		wan_connected_func
+	}
+	 [ "${ACTION}" = "ifdown" ] &&{		
+		logger -t hotplug "WAN UNPLUGGED"
+	}
+}
+
