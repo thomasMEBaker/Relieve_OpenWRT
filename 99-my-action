@@ -38,7 +38,7 @@ wan_connected_func(){
         logger -t hotplug "LAN Subnet: $lan_subnet_mask_calculated"
 
 	#check for IP and subnet clashes
-	if [ "$upstream_router_ip" = "$lan_ip" ] && [ "$my_subnet_mask" = "$lan_subnet_mask_calculated" ]; then
+	if [ "$upstream_router_ip" = "$lan_ip" ]; then
 
 		logger -t hotplug "LAN Network IP Address: $lan_ip"
 
