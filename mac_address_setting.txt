@@ -1,0 +1,31 @@
+get_mac_address() {
+    local interface="$1"
+    local mac_address=$(cat "/sys/class/net/$interface/address" 2>/dev/null)
+    echo "$mac_address"
+}
+
+create_ssid_with_mac() {
+        interface_name="br-lan"  # Replace with the actual wireless interface na
+        mac_address=$(cat "/sys/class/net/$interface_name/address" 2>/dev/null)
+        ssid="MotusVR_Relieve_$(echo "$mac_address" | tr -d : | tr '[:lower:]' '
+
+        config_file="/etc/config/wireless"  # Replace with the actual path to yo
+
+        # Replace SSID in the config file
+        sed -i "s/\(option ssid \).*/\1'$ssid'/" "$config_file"
+
+        # Restart the wireless network (specific to OpenWRT)
+        wifi
+
+        echo "Updated SSID to: $ssid"
+
+}
+
+interface_name="br-lan"  # Replace with the actual interface name
+ssid=$(create_ssid_with_mac "$interface_name")
+
+if [ -n "$ssid" ]; then
+    echo "Generated SSID: $ssid"
+else
+    echo "SSID could not be generated for $interface_name"
+fi
