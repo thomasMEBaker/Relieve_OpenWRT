@@ -5,7 +5,7 @@ get_mac_address() {
 }
 
 create_ssid_with_mac() {
-        interface_name="br-lan"  # Replace with the actual wireless interface na
+        interface_name="lan"  # Replace with the actual wireless interface na
         mac_address=$(cat "/sys/class/net/$interface_name/address" 2>/dev/null)
         ssid="MotusVR_Relieve_$(echo "$mac_address" | tr -d : | tr '[:lower:]' '
 
@@ -21,7 +21,7 @@ create_ssid_with_mac() {
 
 }
 
-interface_name="br-lan"  # Replace with the actual interface name
+interface_name="lan"  # Replace with the actual interface name
 ssid=$(create_ssid_with_mac "$interface_name")
 
 if [ -n "$ssid" ]; then
