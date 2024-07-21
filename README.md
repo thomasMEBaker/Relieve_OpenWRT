@@ -6,7 +6,7 @@ Once you have configured the router with OpenWRT using TL-WR902AC-OpenWRT.mp4
 
 You then need to go to System -> Flash Firmware then restore the firmware from the file on the repo. This will configure the router with a LAN and WAN network and firewall settings etc.
 
-Once you have the standard configuration you need to update all packages using opkg update and install opkg install openssh-sftp-server (using Putty or similar).
+Once you have the standard configuration you need to update all packages using opkg update and install opkg install openssh-sftp-server (using Putty or similar) - username is Root. Make sure all firewalls are turned off on the connecting computer.
 
 You will then be able to download WinSCP and connect via FTP to the router.
 
